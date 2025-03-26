@@ -2,40 +2,42 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
-	// "github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigatewayv2"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
+	"github.com/pedroSoaresll/serverless-golang-boilerplate/constants"
 )
 
-type ServerlessGolangStackProps struct {
+type ServerlessApiStackProps struct {
 	awscdk.StackProps
 }
 
-func NewServerlessGolangStack(scope constructs.Construct, id string, props *ServerlessGolangStackProps) awscdk.Stack {
-	var sprops awscdk.StackProps
-	if props != nil {
-		sprops = props.StackProps
-	}
-	stack := awscdk.NewStack(scope, &id, &sprops)
+func NewServerlessApiStack(scope constructs.Construct, id string, props *ServerlessApiStackProps) awscdk.Stack {
+	stack := awscdk.NewStack(scope, &id, &props.StackProps)
 
-	// The code that defines your stack goes here
+	httpApi := awsapigatewayv2.NewHttpApi(stack, jsii.String("HttpApi"), &awsapigatewayv2.HttpApiProps{
+		ApiName: jsii.String(constants.ENV + "HttpApi"),
+	})
 
-	// example resource
-	// queue := awssqs.NewQueue(stack, jsii.String("ServerlessGolangQueue"), &awssqs.QueueProps{
-	// 	VisibilityTimeout: awscdk.Duration_Seconds(jsii.Number(300)),
-	// })
+	LoadApiGatewayEndpoints(stack, httpApi)
+
+	// Output the HTTP API URL
+	awscdk.NewCfnOutput(stack, jsii.String(constants.ENV+"HttpApiUrl"), &awscdk.CfnOutputProps{
+		Value:       httpApi.Url(),
+		Description: jsii.String("The base URL for the HTTP API Gateway"),
+	})
 
 	return stack
 }
 
 func main() {
-	defer jsii.Close()
-
 	app := awscdk.NewApp(nil)
+	stage := constants.ENV
 
-	NewServerlessGolangStack(app, "ServerlessGolangStack", &ServerlessGolangStackProps{
+	NewServerlessApiStack(app, stage+"ServerlessApiStack", &ServerlessApiStackProps{
 		awscdk.StackProps{
-			Env: env(),
+			StackName: jsii.String(stage + "ServerlessGolangStack"),
+			Env:       env(),
 		},
 	})
 
@@ -49,7 +51,7 @@ func env() *awscdk.Environment {
 	// Account/Region-dependent features and context lookups will not work, but a
 	// single synthesized template can be deployed anywhere.
 	//---------------------------------------------------------------------------
-	return nil
+	// return nil
 
 	// Uncomment if you know exactly what account and region you want to deploy
 	// the stack to. This is the recommendation for production stacks.
@@ -63,8 +65,8 @@ func env() *awscdk.Environment {
 	// implied by the current CLI configuration. This is recommended for dev
 	// stacks.
 	//---------------------------------------------------------------------------
-	// return &awscdk.Environment{
-	//  Account: jsii.String(os.Getenv("CDK_DEFAULT_ACCOUNT")),
-	//  Region:  jsii.String(os.Getenv("CDK_DEFAULT_REGION")),
-	// }
+	return &awscdk.Environment{
+		Account: jsii.String(constants.CDK_DEFAULT_ACCOUNT),
+		Region:  jsii.String(constants.CDK_DEFAULT_REGION),
+	}
 }
