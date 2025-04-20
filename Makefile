@@ -9,8 +9,8 @@ build-lambda:
 
 clean:
 	for dir in $(shell find ./lambda -type d); do \
-		rm $$dir/bootstrap; \
-		rm $$dir/function.zip; \
+		[ -f $$dir/bootstrap ] && rm $$dir/bootstrap; \
+		[ -f $$dir/function.zip ] && rm $$dir/function.zip; \
 	done
 
 cdk-bootstrap:
