@@ -1,0 +1,62 @@
+name: CDK Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Install dependencies
+        run: |
+          go mod tidy
+          npm install -g aws-cdk
+
+      - name: Build lambda functions
+        run: |
+          make clean
+          make build-lambda
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Bootstrap CDK
+        run: make cdk-bootstrap
+
+      - name: Validate stack
+        run: make ci-synth
+
+      - name: Deploy to development
+        if: github.event_name == 'pull_request'
+        run: make ci-deploy
+        env:
+          ENV: dev
+
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main'
+        run: make ci-deploy
+        env:
+          ENV: prod

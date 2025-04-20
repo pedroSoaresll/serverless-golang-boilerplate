@@ -5,11 +5,31 @@ import (
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigatewayv2"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigatewayv2integrations"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
+	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/pedroSoaresll/serverless-golang-boilerplate/constants"
+
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigatewayv2integrations"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 )
+
+func NewServerlessApiStack(scope constructs.Construct, id string, props *ServerlessApiStackProps) awscdk.Stack {
+	stack := awscdk.NewStack(scope, &id, &props.StackProps)
+
+	httpApi := awsapigatewayv2.NewHttpApi(stack, jsii.String("HttpApi"), &awsapigatewayv2.HttpApiProps{
+		ApiName: jsii.String(constants.ENV + "HttpApi"),
+	})
+
+	loadApiGatewayEndpoints(stack, httpApi)
+
+	// Output the HTTP API URL
+	awscdk.NewCfnOutput(stack, jsii.String(constants.ENV+"HttpApiUrl"), &awscdk.CfnOutputProps{
+		Value:       httpApi.Url(),
+		Description: jsii.String("The base URL for the HTTP API Gateway"),
+	})
+
+	return stack
+}
 
 type APIEndpointConfig struct {
 	FunctionName string
@@ -39,7 +59,7 @@ var endpointConfigs = []APIEndpointConfig{
 	},
 }
 
-func LoadApiGatewayEndpoints(stack awscdk.Stack, httpApi awsapigatewayv2.HttpApi) {
+func loadApiGatewayEndpoints(stack awscdk.Stack, httpApi awsapigatewayv2.HttpApi) {
 	for _, config := range endpointConfigs {
 		buildEndpoint(stack, httpApi, config)
 	}
